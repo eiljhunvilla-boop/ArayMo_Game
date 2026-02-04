@@ -4,16 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Runner Game Deluxe</title>
-
 <style>
 body{
     margin:0;
-    background:#020617;
     display:flex;
     justify-content:center;
     align-items:center;
     height:100vh;
     font-family:Arial, sans-serif;
+    background:#020617;
     color:#fff;
 }
 
@@ -27,11 +26,7 @@ body{
     position:relative;
 }
 
-/* ===== MENU ===== */
-#menu{
-    padding:16px;
-    text-align:center;
-}
+#menu{padding:16px; text-align:center;}
 
 .characters{
     display:grid;
@@ -71,7 +66,6 @@ button{
     cursor:pointer;
 }
 
-/* ===== GAME ===== */
 #hud{
     position:absolute;
     top:10px;
@@ -91,11 +85,10 @@ canvas{
 </head>
 <body>
 
-<!-- ===== MENU ===== -->
+<!-- MENU -->
 <div id="menu">
     <h2>Runner Game Deluxe</h2>
     <p>Select Character</p>
-
     <div class="characters">
         <div class="char" data-img="/krexia.jpg"><img src="/krexia.jpg"><small>KREXIA</small></div>
         <div class="char" data-img="/rhoda.jpg"><img src="/rhoda.jpg"><small>RHODA</small></div>
@@ -105,11 +98,10 @@ canvas{
         <div class="char" data-img="/wilfred.jpg"><img src="/wilfred.jpg"><small>WILFRED</small></div>
         <div class="char" data-img="/jullen.jpg"><img src="/jullen.jpg"><small>JULLEN</small></div>
     </div>
-
     <button id="startBtn">START GAME</button>
 </div>
 
-<!-- ===== GAME ===== -->
+<!-- GAME -->
 <div id="game" style="display:none">
     <div id="hud">
         <div>Score: <span id="score">0</span></div>
@@ -118,7 +110,7 @@ canvas{
     <canvas id="canvas" width="360" height="520"></canvas>
 </div>
 
-<!-- ===== AUDIO ===== -->
+<!-- AUDIO -->
 <audio id="bgm" src="/bgm.mp3" loop></audio>
 <audio id="jumpSound" src="/jump.mp3"></audio>
 <audio id="hitSound" src="/hit.mp3"></audio>
@@ -127,7 +119,6 @@ canvas{
 const canvas = document.getElementById('canvas');
 const ctx = canvas.getContext('2d');
 
-/* ===== IMAGES ===== */
 const bgImg = new Image();
 bgImg.src = "/bg.jpg";
 
@@ -146,18 +137,20 @@ const bgm = document.getElementById('bgm');
 const jumpSound = document.getElementById('jumpSound');
 const hitSound = document.getElementById('hitSound');
 
-/* ===== CHARACTER SELECT ===== */
+// CHARACTER SELECT
 document.querySelectorAll('.char').forEach(c=>{
-    c.onclick=()=>{
+    c.onclick = () => {
         document.querySelectorAll('.char').forEach(x=>x.classList.remove('selected'));
         c.classList.add('selected');
-        selectedImg=c.dataset.img;
+        selectedImg = c.dataset.img;
     };
 });
 
+// BEST SCORE
 best = localStorage.getItem('runnerBest') || 0;
 document.getElementById('best').innerText = best;
 
+// START GAME
 document.getElementById('startBtn').onclick = ()=>{
     if(!selectedImg){
         alert("Select a character!");
@@ -169,28 +162,20 @@ document.getElementById('startBtn').onclick = ()=>{
     startGame();
 };
 
-/* ===== GAME START ===== */
+// GAME START
 function startGame(){
-    player = {
-        x:60,
-        y:groundY-50,
-        w:42,
-        h:42,
-        vy:0,
-        onGround:true,
-        img:new Image()
-    };
+    player = { x:60, y:groundY-50, w:42, h:42, vy:0, onGround:true, img:new Image() };
     player.img.src = selectedImg;
 
-    obstacles=[];
-    score=0;
-    frame=0;
-    gameOver=false;
+    obstacles = [];
+    score = 0;
+    frame = 0;
+    gameOver = false;
 
     loop();
 }
 
-/* ===== INPUT ===== */
+// INPUT
 function jump(){
     if(player.onGround && !gameOver){
         player.vy = jumpPower;
@@ -202,56 +187,44 @@ function jump(){
 canvas.onclick = jump;
 document.onkeydown = e => { if(e.code==='Space') jump(); };
 
-/* ===== GAME LOOP ===== */
+// GAME LOOP
 function loop(){
     if(gameOver) return;
     frame++;
 
     ctx.clearRect(0,0,360,520);
 
-    // Background image
+    // Background
     ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
 
-    // Ground (semi-transparent)
+    // Ground
     ctx.fillStyle="rgba(30,41,59,0.6)";
-    ctx.fillRect(0,groundY,360,100);
+    ctx.fillRect(0, groundY, 360, 100);
 
     // Player physics
     player.vy += gravity;
     player.y += player.vy;
-
     if(player.y + player.h >= groundY){
         player.y = groundY - player.h;
         player.vy = 0;
         player.onGround = true;
     }
-
     ctx.drawImage(player.img, player.x, player.y, player.w, player.h);
 
     // Obstacles
     if(frame % 90 === 0){
-        obstacles.push({
-            x:360,
-            w:36,
-            h:48
-        });
+        obstacles.push({ x:360, w:36, h:48 });
     }
-
     obstacles.forEach(o=>{
         o.x -= speed;
         ctx.drawImage(obstacleImg, o.x, groundY - o.h, o.w, o.h);
 
-        // Collision
-        if(
-            player.x < o.x + o.w &&
-            player.x + player.w > o.x &&
-            player.y + player.h > groundY - o.h
-        ){
+        if(player.x < o.x + o.w && player.x + player.w > o.x && player.y + player.h > groundY - o.h){
             endGame();
         }
     });
 
-    obstacles = obstacles.filter(o=>o.x > -60);
+    obstacles = obstacles.filter(o => o.x > -60);
 
     score++;
     document.getElementById('score').innerText = score;
@@ -259,9 +232,9 @@ function loop(){
     requestAnimationFrame(loop);
 }
 
-/* ===== GAME OVER ===== */
+// GAME OVER
 function endGame(){
-    gameOver=true;
+    gameOver = true;
     bgm.pause();
     hitSound.currentTime = 0;
     hitSound.play();
@@ -270,12 +243,12 @@ function endGame(){
         best = score;
         localStorage.setItem('runnerBest', best);
     }
+
     setTimeout(()=>{
-        alert("Game Over!\nScore: " + score);
+        alert("Game Over!\nScore: "+score);
         location.reload();
     },200);
 }
 </script>
-
 </body>
 </html>
