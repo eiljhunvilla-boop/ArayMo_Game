@@ -2,9 +2,16 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport"
+content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Runner Game Deluxe</title>
+
 <style>
+*{
+    box-sizing:border-box;
+    -webkit-tap-highlight-color:transparent;
+}
+
 body{
     margin:0;
     display:flex;
@@ -14,6 +21,9 @@ body{
     font-family:Arial, sans-serif;
     background:#020617;
     color:#fff;
+    touch-action:manipulation;
+    user-select:none;
+    -webkit-user-select:none;
 }
 
 #menu,#game{
@@ -26,23 +36,23 @@ body{
     position:relative;
 }
 
-#menu{padding:16px; text-align:center;}
+#menu{
+    padding:16px;
+    text-align:center;
+}
 
 .characters{
     display:grid;
-    grid-template-columns:repeat(3,1fr);
-    gap:10px;
+    grid-template-columns:repeat(2,1fr);
+    gap:12px;
 }
 
 .char{
     border:2px solid #1e293b;
     border-radius:12px;
-    padding:6px;
+    padding:8px;
     cursor:pointer;
-    transition:.2s;
 }
-
-.char:hover{ transform:scale(1.05); }
 
 .char.selected{
     border-color:#22c55e;
@@ -51,18 +61,19 @@ body{
 
 .char img{
     width:100%;
-    height:70px;
+    height:90px;
     object-fit:contain;
 }
 
 button{
-    margin-top:14px;
+    margin-top:16px;
     width:100%;
-    padding:10px;
+    padding:12px;
     border:none;
     border-radius:10px;
     background:#22c55e;
     font-weight:bold;
+    font-size:16px;
     cursor:pointer;
 }
 
@@ -89,15 +100,18 @@ canvas{
 <div id="menu">
     <h2>Runner Game Deluxe</h2>
     <p>Select Character</p>
+
     <div class="characters">
-        <div class="char" data-img="/krexia.jpg"><img src="/krexia.jpg"><small>KREXIA</small></div>
-        <div class="char" data-img="/rhoda.jpg"><img src="/rhoda.jpg"><small>RHODA</small></div>
-        <div class="char" data-img="/eiljhun.jpg"><img src="/eiljhun.jpg"><small>EILJHUN</small></div>
-        <div class="char" data-img="/cariza.jpg"><img src="/cariza.jpg"><small>CARIZA</small></div>
-        <div class="char" data-img="/aldrid.jpg"><img src="/aldrid.jpg"><small>ALDRID</small></div>
-        <div class="char" data-img="/wilfred.jpg"><img src="/wilfred.jpg"><small>WILFRED</small></div>
-        <div class="char" data-img="/jullen.jpg"><img src="/jullen.jpg"><small>JULLEN</small></div>
+        <div class="char" data-player="KATELYN">
+            <img src="Katelyn.jpg">
+            <small>KATELYN</small>
+        </div>
+        <div class="char" data-player="TONG2X">
+            <img src="Tong.jpg">
+            <small>TONG2X</small>
+        </div>
     </div>
+
     <button id="startBtn">START GAME</button>
 </div>
 
@@ -111,71 +125,98 @@ canvas{
 </div>
 
 <!-- AUDIO -->
-<audio id="bgm" src="/bgm.mp3" loop></audio>
-<audio id="jumpSound" src="/jump.mp3"></audio>
-<audio id="hitSound" src="/hit.mp3"></audio>
+<audio id="bgm" src="bgm.mp3" loop></audio>
+<audio id="jumpSound" src="jump.mp3"></audio>
+<audio id="hitSound" src="hit.mp3"></audio>
 
 <script>
-const canvas = document.getElementById('canvas');
-const ctx = canvas.getContext('2d');
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
 
 const bgImg = new Image();
-bgImg.src = "/bg.jpg";
+bgImg.src = "bg.jpg";
 
-const obstacleImg = new Image();
-obstacleImg.src = "/obstacle.jpg";
+let obstacleImg = new Image();
 
-let player, obstacles, score, best, gameOver, frame;
-let selectedImg = null;
+let player, obstacles, score, best, frame;
+let gameOver = false;
+let animationId;
+
+let selectedPlayer = null;
+let selectedPlayerImg = null;
 
 const groundY = 420;
 const gravity = 0.6;
 const jumpPower = -12;
 const speed = 4;
 
-const bgm = document.getElementById('bgm');
-const jumpSound = document.getElementById('jumpSound');
-const hitSound = document.getElementById('hitSound');
+const bgm = document.getElementById("bgm");
+const jumpSound = document.getElementById("jumpSound");
+const hitSound = document.getElementById("hitSound");
 
-// CHARACTER SELECT
-document.querySelectorAll('.char').forEach(c=>{
-    c.onclick = () => {
-        document.querySelectorAll('.char').forEach(x=>x.classList.remove('selected'));
-        c.classList.add('selected');
-        selectedImg = c.dataset.img;
-    };
+/* CHARACTER SELECT */
+document.querySelectorAll(".char").forEach(c=>{
+    c.addEventListener("click", ()=>{
+        document.querySelectorAll(".char").forEach(x=>x.classList.remove("selected"));
+        c.classList.add("selected");
+
+        selectedPlayer = c.dataset.player;
+
+        if(selectedPlayer === "KATELYN"){
+            selectedPlayerImg = "Katelyn.jpg";
+            obstacleImg.src = "Tong.jpg";
+        }else{
+            selectedPlayerImg = "Tong.jpg";
+            obstacleImg.src = "Katelyn.jpg";
+        }
+    });
 });
 
-// BEST SCORE
-best = localStorage.getItem('runnerBest') || 0;
-document.getElementById('best').innerText = best;
+/* BEST SCORE */
+best = localStorage.getItem("runnerBest") || 0;
+document.getElementById("best").innerText = best;
 
-// START GAME
-document.getElementById('startBtn').onclick = ()=>{
-    if(!selectedImg){
+/* START GAME */
+document.getElementById("startBtn").addEventListener("click", async ()=>{
+    if(!selectedPlayer){
         alert("Select a character!");
         return;
     }
-    document.getElementById('menu').style.display='none';
-    document.getElementById('game').style.display='block';
-    bgm.play();
-    startGame();
-};
 
-// GAME START
+    document.getElementById("menu").style.display="none";
+    document.getElementById("game").style.display="block";
+
+    try{ await bgm.play(); }catch(e){}
+    startGame();
+});
+
 function startGame(){
-    player = { x:60, y:groundY-50, w:42, h:42, vy:0, onGround:true, img:new Image() };
-    player.img.src = selectedImg;
+    cancelAnimationFrame(animationId);
+
+    player = {
+        x:60,
+        y:groundY-50,
+        w:42,
+        h:42,
+        vy:0,
+        onGround:true,
+        img:new Image()
+    };
+
+    player.img.src = selectedPlayerImg;
 
     obstacles = [];
     score = 0;
     frame = 0;
     gameOver = false;
 
+    canvas.addEventListener("touchstart", jump, {passive:true});
+    canvas.addEventListener("click", jump);
+
     loop();
 }
 
-// INPUT
+/* INPUT */
 function jump(){
     if(player.onGround && !gameOver){
         player.vy = jumpPower;
@@ -184,70 +225,85 @@ function jump(){
         jumpSound.play();
     }
 }
-canvas.onclick = jump;
-document.onkeydown = e => { if(e.code==='Space') jump(); };
 
-// GAME LOOP
+document.addEventListener("keydown", e=>{
+    if(e.code === "Space") jump();
+});
+
+/* GAME LOOP */
 function loop(){
     if(gameOver) return;
     frame++;
 
-    ctx.clearRect(0,0,360,520);
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(bgImg,0,0,canvas.width,canvas.height);
 
-    // Background
-    ctx.drawImage(bgImg, 0, 0, canvas.width, canvas.height);
-
-    // Ground
     ctx.fillStyle="rgba(30,41,59,0.6)";
-    ctx.fillRect(0, groundY, 360, 100);
+    ctx.fillRect(0,groundY,canvas.width,100);
 
-    // Player physics
     player.vy += gravity;
     player.y += player.vy;
+
     if(player.y + player.h >= groundY){
         player.y = groundY - player.h;
         player.vy = 0;
         player.onGround = true;
     }
-    ctx.drawImage(player.img, player.x, player.y, player.w, player.h);
 
-    // Obstacles
+    ctx.drawImage(player.img,player.x,player.y,player.w,player.h);
+
     if(frame % 90 === 0){
-        obstacles.push({ x:360, w:36, h:48 });
+        obstacles.push({x:canvas.width,w:36,h:48});
     }
-    obstacles.forEach(o=>{
+
+    for(let o of obstacles){
         o.x -= speed;
-        ctx.drawImage(obstacleImg, o.x, groundY - o.h, o.w, o.h);
+        ctx.drawImage(obstacleImg,o.x,groundY-o.h,o.w,o.h);
 
-        if(player.x < o.x + o.w && player.x + player.w > o.x && player.y + player.h > groundY - o.h){
+        if(
+            player.x < o.x + o.w &&
+            player.x + player.w > o.x &&
+            player.y + player.h > groundY - o.h
+        ){
             endGame();
+            return;
         }
-    });
+    }
 
-    obstacles = obstacles.filter(o => o.x > -60);
-
+    obstacles = obstacles.filter(o=>o.x>-60);
     score++;
-    document.getElementById('score').innerText = score;
+    document.getElementById("score").innerText = score;
 
-    requestAnimationFrame(loop);
+    animationId = requestAnimationFrame(loop);
 }
 
-// GAME OVER
+/* GAME OVER */
 function endGame(){
     gameOver = true;
+    cancelAnimationFrame(animationId);
+
     bgm.pause();
     hitSound.currentTime = 0;
     hitSound.play();
 
     if(score > best){
         best = score;
-        localStorage.setItem('runnerBest', best);
+        localStorage.setItem("runnerBest",best);
     }
 
-    setTimeout(()=>{
-        alert("Game Over!\nScore: "+score);
-        location.reload();
-    },200);
+    ctx.fillStyle="rgba(0,0,0,0.75)";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    ctx.fillStyle="#fff";
+    ctx.textAlign="center";
+    ctx.font="28px Arial";
+    ctx.fillText("GAME OVER",canvas.width/2,220);
+
+    ctx.font="18px Arial";
+    ctx.fillText("Score: "+score,canvas.width/2,260);
+    ctx.fillText("Tap to Restart",canvas.width/2,300);
+
+    canvas.onclick = ()=>location.reload();
 }
 </script>
 </body>
